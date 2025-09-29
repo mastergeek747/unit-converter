@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>온스(oz)를 그램(g)으로 변환</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .converter {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 320px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 90%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.8rem;
+            height: 15px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="converter">
+        <h1>온스 ↔ 그램 변환기</h1>
+        <div>
+            <label for="ounces">온스 (oz)</label><br>
+            <input type="text" id="ounces" placeholder="예: 8, 0.5, 1/2" oninput="convert('oz-to-g')">
+            <div id="oz-error" class="error-message"></div>
+        </div>
+        <div style="margin-top: 20px;">
+            <label for="grams">그램 (g)</label><br>
+            <input type="number" id="grams" placeholder="그램 값을 입력하세요" oninput="convert('g-to-oz')">
+        </div>
+    </div>
+
+    <script>
+        function evaluateFraction(fraction) {
+            if (fraction.includes('/')) {
+                const parts = fraction.split('/');
+                if (parts.length === 2 && parts[1] !== '0') {
+                    const numerator = parseFloat(parts[0]);
+                    const denominator = parseFloat(parts[1]);
+                    if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+                        return numerator / denominator;
+                    }
+                }
+            }
+            return parseFloat(fraction);
+        }
+
+        function convert(direction) {
+            const ozToGramsFactor = 28.34952;
+            const ozError = document.getElementById('oz-error');
+
+            if (direction === 'oz-to-g') {
+                const ouncesInput = document.getElementById('ounces').value;
+                ozError.textContent = ''; 
+
+                if (ouncesInput.trim() === '') {
+                    document.getElementById('grams').value = '';
+                    return;
+                }
+
+                const ouncesValue = evaluateFraction(ouncesInput);
+
+                if (isNaN(ouncesValue)) {
+                    ozError.textContent = '유효한 숫자나 분수를 입력하세요.';
+                    document.getElementById('grams').value = '';
+                } else {
+                    const grams = ouncesValue * ozToGramsFactor;
+                    // 소수점 한 자리까지만 표시하도록 변경
+                    document.getElementById('grams').value = grams.toFixed(1);
+                }
+                
+            } else if (direction === 'g-to-oz') {
+                const grams = document.getElementById('grams').value;
+                const ounces = grams / ozToGramsFactor;
+                // 소수점 한 자리까지만 표시하도록 변경
+                document.getElementById('ounces').value = grams ? ounces.toFixed(2) : '';
+                ozError.textContent = '';
+            }
+        }
+    </script>
+
+</body>
+</html>
