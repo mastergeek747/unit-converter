@@ -3,68 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>온스(oz)를 그램(g)으로 변환</title>
+    <title>양방향 단위 변환기 (기능 분리)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Inter 폰트 추가 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f4;
+            font-family: 'Inter', sans-serif;
         }
-        .converter {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 320px;
+        /* 스크롤바 스타일링 */
+        #historyList::-webkit-scrollbar {
+            width: 6px;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
+        #historyList::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
-        input {
-            width: 90%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            font-size: 1rem;
+        #historyList::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
         }
-        label {
-            font-weight: bold;
-            color: #555;
-        }
-        .error-message {
-            color: red;
-            font-size: 0.8rem;
-            height: 15px;
-            margin-top: 5px;
+        #historyList::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
-<body>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen py-8">
 
-    <div class="converter">
-        <h1>온스 ↔ 그램 변환기</h1>
-        <div>
-            <label for="ounces">온스 (oz)</label><br>
-            <input type="text" id="ounces" placeholder="예: 8, 0.5, 1/2" oninput="convert('oz-to-g')">
-            <div id="oz-error" class="error-message"></div>
+    <div class="w-full max-w-md">
+        <!-- 변환기 카드 -->
+        <div class="converter bg-white p-8 rounded-xl shadow-lg text-center mb-6">
+            <h1 class="text-2xl font-bold text-slate-800 mb-2">단위 변환기</h1>
+            <p class="text-slate-500 mb-6">온스(oz)와 그램(g)을 실시간으로 변환합니다. (예: 1/16, 0.5)</p>
+            
+            <div class="mb-4 text-left">
+                <label for="ozInput" class="block text-sm font-medium text-slate-600 mb-1">온스 (oz)</label>
+                <input type="text" id="ozInput" oninput="convert('oz')" placeholder="온스 값을 입력 (예: 1/16)..." inputmode="decimal" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+            </div>
+
+            <div class="text-2xl text-slate-400 my-2">&#8595;&#8593;</div>
+
+            <div class="mb-6 text-left">
+                 <label for="gramInput" class="block text-sm font-medium text-slate-600 mb-1">그램 (g)</label>
+                <input type="text" id="gramInput" oninput="convert('g')" placeholder="그램 값을 입력..." inputmode="decimal" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+            </div>
+
+            <button onclick="resetConverter()" class="w-full p-3 border border-slate-300 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">
+                입력창 초기화
+            </button>
         </div>
-        <div style="margin-top: 20px;">
-            <label for="grams">그램 (g)</label><br>
-            <input type="number" id="grams" placeholder="그램 값을 입력하세요" oninput="convert('g-to-oz')">
+
+        <!-- 변환 기록 카드 -->
+        <div id="historyContainer" class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-slate-700">변환 기록</h2>
+                <button onclick="clearHistory()" class="text-sm bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-lg transition">
+                    기록 삭제
+                </button>
+            </div>
+            <ul id="historyList" class="list-none p-0 m-0 text-left text-slate-600 max-h-48 overflow-y-auto pr-2">
+                <li id="noHistory" class="text-slate-400 text-center">기록이 없습니다.</li>
+            </ul>
         </div>
     </div>
 
+
     <script>
-        function evaluateFraction(fraction) {
-            if (fraction.includes('/')) {
-                const parts = fraction.split('/');
-                if (parts.length === 2 && parts[1] !== '0') {
+        const OZ_TO_GRAM = 28.34952;
+        const ozInput = document.getElementById('ozInput');
+        const gramInput = document.getElementById('gramInput');
+        const historyList = document.getElementById('historyList');
+        let lastLoggedValue = '';
+
+        function parseInput(value) {
+            if (typeof value !== 'string' || value.trim() === '') return NaN;
+            value = value.trim();
+            if (value.includes('/')) {
+                const parts = value.split('/');
+                if (parts.length === 2) {
                     const numerator = parseFloat(parts[0]);
                     const denominator = parseFloat(parts[1]);
                     if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
@@ -72,42 +87,72 @@
                     }
                 }
             }
-            return parseFloat(fraction);
+            return parseFloat(value);
+        }
+        
+        // 변환 기록을 추가하는 함수
+        function addHistoryEntry(entry) {
+            if(entry === lastLoggedValue) return; // 마지막 기록과 같으면 추가하지 않음
+            
+            const noHistoryEl = document.getElementById('noHistory');
+            if(noHistoryEl) {
+                // '기록 없음' 메시지를 삭제
+                noHistoryEl.remove();
+            }
+            const li = document.createElement('li');
+            li.className = 'p-2 border-b border-slate-100';
+            li.textContent = entry;
+            historyList.prepend(li); // 새 기록을 맨 위에 추가
+            lastLoggedValue = entry;
+
+            // 기록이 15개를 초과하면 가장 오래된 기록 삭제
+            if (historyList.children.length > 15) {
+                historyList.removeChild(historyList.lastChild);
+            }
         }
 
-        function convert(direction) {
-            const ozToGramsFactor = 28.34952;
-            const ozError = document.getElementById('oz-error');
-
-            if (direction === 'oz-to-g') {
-                const ouncesInput = document.getElementById('ounces').value;
-                ozError.textContent = ''; 
-
-                if (ouncesInput.trim() === '') {
-                    document.getElementById('grams').value = '';
+        function convert(sourceUnit) {
+            let resultString = '';
+            if (sourceUnit === 'oz') {
+                const ouncesValue = ozInput.value;
+                const ounces = parseInput(ouncesValue);
+                if (isNaN(ounces)) {
+                    gramInput.value = '';
                     return;
                 }
-
-                const ouncesValue = evaluateFraction(ouncesInput);
-
-                if (isNaN(ouncesValue)) {
-                    ozError.textContent = '유효한 숫자나 분수를 입력하세요.';
-                    document.getElementById('grams').value = '';
-                } else {
-                    const grams = ouncesValue * ozToGramsFactor;
-                    // 소수점 한 자리까지만 표시하도록 변경
-                    document.getElementById('grams').value = grams.toFixed(1);
+                const grams = ounces * OZ_TO_GRAM;
+                gramInput.value = +grams.toFixed(3);
+                resultString = `${ouncesValue} oz = ${gramInput.value} g`;
+            } else if (sourceUnit === 'g') {
+                const gramsValue = gramInput.value;
+                const grams = parseInput(gramsValue);
+                 if (isNaN(grams)) {
+                    ozInput.value = '';
+                    return;
                 }
-                
-            } else if (direction === 'g-to-oz') {
-                const grams = document.getElementById('grams').value;
-                const ounces = grams / ozToGramsFactor;
-                // 소수점 한 자리까지만 표시하도록 변경
-                document.getElementById('ounces').value = grams ? ounces.toFixed(2) : '';
-                ozError.textContent = '';
+                const ounces = grams / OZ_TO_GRAM;
+                ozInput.value = +ounces.toFixed(3);
+                resultString = `${gramsValue} g = ${ozInput.value} oz`;
             }
+
+            if (resultString) {
+                addHistoryEntry(resultString);
+            }
+        }
+
+        // 입력창만 초기화하는 함수
+        function resetConverter() {
+            ozInput.value = '';
+            gramInput.value = '';
+        }
+
+        // 기록만 삭제하는 함수
+        function clearHistory() {
+            historyList.innerHTML = '<li id="noHistory" class="text-slate-400 text-center">기록이 없습니다.</li>';
+            lastLoggedValue = '';
         }
     </script>
 
 </body>
 </html>
+
